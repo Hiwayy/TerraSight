@@ -4,6 +4,11 @@ import json
 import logging
 import datetime
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
+import requests
+import base64
+from io import BytesIO
+from PIL import Image
+import urllib.request
 
 import ee
 
@@ -880,6 +885,80 @@ def static_image():
         </html>
         """
 
+@app.route('/api/analyze_image', methods=['POST'])
+def analyze_image():
+    """Analyse une image avec Ollama en utilisant le modèle Llava."""
+    try:
+        data = request.json
+        image_url = data.get('image_url')
+        prompt = data.get('prompt', "Décrivez ce que vous voyez dans cette image.")
+        
+        if not image_url:
+            return jsonify({"error": "URL de l'image manquante"}), 400
+        
+        # Télécharger l'image
+        logger.info(f"Téléchargement de l'image depuis: {image_url[:100]}...")
+        
+        try:
+            response = urllib.request.urlopen(image_url)
+            image_data = response.read()
+        except Exception as e:
+            logger.error(f"Erreur lors du téléchargement de l'image: {str(e)}")
+            return jsonify({"error": f"Erreur lors du téléchargement de l'image: {str(e)}"}), 500
+        
+        # Convertir l'image en base64
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
+        # Préparer la requête pour Ollama
+        ollama_url = "http://localhost:11434/api/generate"
+        ollama_payload = {
+            "model": "llava",
+            "prompt": prompt,
+            "images": [image_base64],
+            "stream": False,
+            "options": {
+                "temperature": 0.3,      # Température plus basse pour des réponses plus déterministes
+                "top_p": 0.95,           # Légèrement plus élevé pour une sélection plus précise
+                "top_k": 40,             # Valeur standard pour un bon équilibre
+                "max_tokens": 1200,      # Plus de tokens pour une analyse détaillée
+                "repeat_penalty": 1.2,   # Légèrement pénaliser les répétitions
+                "frequency_penalty": 0.1,# Très léger pour éviter la monotonie tout en maintenant la rigueur
+                "presence_penalty": 0.1  # Très léger pour favoriser la diversité tout en restant focalisé
+            }
+        }
+        
+        # Envoyer la requête à Ollama
+        logger.info("Envoi de la requête à Ollama avec un prompt de longueur: %d caractères", len(prompt))
+        try:
+            ollama_response = requests.post(ollama_url, json=ollama_payload, timeout=90)  # Timeout plus long
+        except requests.exceptions.ConnectionError:
+            logger.error("Erreur de connexion à Ollama. Vérifiez qu'Ollama est en cours d'exécution.")
+            return jsonify({"error": "Erreur de connexion à Ollama. Vérifiez qu'Ollama est en cours d'exécution sur localhost:11434."}), 503
+        except requests.exceptions.Timeout:
+            logger.error("Délai d'attente dépassé lors de la connexion à Ollama.")
+            return jsonify({"error": "L'analyse a pris trop de temps. Essayez à nouveau ou utilisez une image moins complexe."}), 504
+        
+        if ollama_response.status_code != 200:
+            logger.error(f"Erreur lors de l'appel à Ollama: {ollama_response.text}")
+            return jsonify({"error": f"Erreur Ollama: {ollama_response.text}"}), 500
+        
+        # Traiter la réponse
+        result = ollama_response.json()
+        analysis_text = result.get('response', 'Aucune analyse disponible')
+        
+        logger.info("Analyse terminée avec succès, longueur de la réponse: %d caractères", len(analysis_text))
+        
+        return jsonify({
+            "success": True,
+            "analysis": analysis_text
+        })
+        
+    except Exception as e:
+        logger.error(f"Exception lors de l'analyse de l'image: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({"error": f"Erreur lors de l'analyse: {str(e)}"}), 500
+    
 # Servir les fichiers statiques
 @app.route('/static/<path:filename>')
 def static_files(filename):
