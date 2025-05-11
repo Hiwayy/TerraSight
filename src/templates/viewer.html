@@ -62,7 +62,10 @@
                         <button id="fullscreen-view" class="btn btn-secondary btn-block">
                             <i class="fas fa-expand"></i> Plein écran
                         </button>
-                        
+
+                        <button id="analyze-image" class="btn btn-secondary btn-block">
+                            <i class="fas fa-robot"></i> Analyser avec IA
+                        </button>
                         <div id="status" class="status-message" style="display: none;"></div>
                     </div>
                     
@@ -118,6 +121,16 @@
                             <i class="fas fa-database"></i>
                             <span>{{ dataset.id }}</span>
                         </div>
+                    </div>
+
+                    <div id="analysis-container" class="analysis-container" style="display: none;">
+                        <div class="analysis-header">
+                            <h3><i class="fas fa-robot"></i> Analyse IA</h3>
+                        </div>
+                        <div id="analysis-loading" class="analysis-loading" style="display: none;">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="analysis-content" class="analysis-content"></div>
                     </div>
                 </div>
                 <div class="image-info-panel">
@@ -342,6 +355,127 @@
             statusElement.style.display = 'none';
         }
     });
+
+    // Éléments du DOM pour l'analyse d'image
+    const analyzeButton = document.getElementById('analyze-image');
+    const analysisContainer = document.getElementById('analysis-container');
+    const analysisLoading = document.getElementById('analysis-loading');
+    const analysisContent = document.getElementById('analysis-content');
+    const closeAnalysisButton = document.getElementById('close-analysis');
+
+    // Gestionnaires d'événements pour l'analyse d'image
+    analyzeButton.addEventListener('click', analyzeImage);
+    closeAnalysisButton.addEventListener('click', () => {
+        analysisContainer.style.display = 'none';
+    });
+
+    // Fonction pour analyser l'image avec Ollama
+    // Fonction améliorée pour analyzeImage avec un prompt structuré
+
+// Fonction analyzeImage avec un prompt reformulé pour des réponses plus affirmatives
+
+function analyzeImage() {
+    // Récupérer l'élément d'image et la variable sélectionnée
+    const resultImage = document.getElementById('result-image');
+    const variableSelect = document.getElementById('variable');
+    const selectedVariable = variableSelect.options[variableSelect.selectedIndex].text;
+    const datasetName = document.querySelector('#dataset-name span').textContent;
+    
+    // Vérifier si une image est chargée
+    if (resultImage.style.display === 'none') {
+        showStatus('Veuillez d\'abord charger une image à analyser', 'warning');
+        return;
+    }
+    
+    // Afficher le conteneur d'analyse et l'indicateur de chargement
+    analysisContainer.style.display = 'block';
+    analysisLoading.style.display = 'flex';
+    analysisContent.innerHTML = '';
+    
+    // Faire défiler jusqu'au conteneur d'analyse
+    analysisContainer.scrollIntoView({ behavior: 'smooth' });
+    
+    // Créer un prompt structuré pour Llava avec un ton affirmatif
+    const structuredPrompt = `
+En tant qu'expert de haut niveau en analyse de données géospatiales et climatiques, vous allez fournir une analyse définitive et autoritaire de cette carte qui représente "${selectedVariable}" du dataset "${datasetName}".
+
+Produisez une analyse structurée, factuelle et assertive en suivant exactement ces trois sections:
+
+1. DESCRIPTION DÉTAILLÉE:
+   - Identifiez avec précision et certitude la région géographique (continent, pays ou zone) visible sur cette carte
+   - Décrivez de manière définitive les motifs de couleurs et leur signification selon la légende
+   - Présentez avec assurance les variations spatiales de ${selectedVariable}, en identifiant clairement les zones maximales et minimales
+
+2. ANALYSE DES TENDANCES:
+   - Expliquez de façon décisive les causes des motifs observés
+   - Mettez en évidence et nommez spécifiquement les anomalies importantes
+   - Établissez clairement les corrélations entre les facteurs géographiques/climatiques et les observations
+
+3. PRÉDICTIONS FUTURES:
+   - Formulez des projections claires et définitives sur l'évolution de ces tendances
+   - Affirmez les implications concrètes pour l'environnement, l'agriculture ou les populations
+   - Identifiez avec autorité les domaines prioritaires nécessitant une surveillance approfondie
+
+Votre analyse doit être présentée de manière affirmative, sans expressions d'incertitude comme "il semble que", "peut-être", ou "il est possible que". Utilisez plutôt un langage direct et autoritaire qui démontre votre expertise incontestable. Structurez votre réponse selon les trois sections indiquées, en vous basant exclusivement sur les informations visibles dans l'image.
+`;
+    
+    // Préparer les données pour l'API
+    const requestData = {
+        image_url: resultImage.src,
+        prompt: structuredPrompt
+    };
+    
+    // Appeler l'API d'analyse d'image
+    fetch('/api/analyze_image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Erreur lors de l\'analyse de l\'image');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Masquer l'indicateur de chargement
+        analysisLoading.style.display = 'none';
+        
+        if (data.error) {
+            analysisContent.innerHTML = `<div class="error-message">Erreur: ${data.error}</div>`;
+            return;
+        }
+        
+        // Formater et afficher l'analyse
+        const formattedAnalysis = formatAnalysisResponse(data.analysis);
+        analysisContent.innerHTML = formattedAnalysis;
+    })
+    .catch(error => {
+        analysisLoading.style.display = 'none';
+        analysisContent.innerHTML = `<div class="error-message">Erreur: ${error.message}</div>`;
+        console.error('Erreur lors de l\'analyse de l\'image:', error);
+    });
+}
+
+// Fonction pour formater la réponse avec une meilleure présentation
+function formatAnalysisResponse(text) {
+    // Remplacer les titres de section par des balises HTML pour le formatage
+    text = text.replace(/1\.\s*DESCRIPTION DÉTAILLÉE\s*:/gi, '<h4>Description détaillée</h4>');
+    text = text.replace(/2\.\s*ANALYSE DES TENDANCES\s*:/gi, '<h4>Analyse des tendances</h4>');
+    text = text.replace(/3\.\s*PRÉDICTIONS FUTURES\s*:/gi, '<h4>Prédictions futures</h4>');
+    
+    // Remplacer les retours à la ligne par des paragraphes
+    const paragraphs = text.split('\n\n');
+    return paragraphs.map(p => {
+        if (p.trim() === '') return '';
+        if (p.startsWith('<h4>')) return p;
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+}
 </script>
 </body>
 </html>
