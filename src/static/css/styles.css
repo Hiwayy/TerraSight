@@ -141,3 +141,119 @@ button:hover {
   color: #7f8c8d;
   font-size: 14px;
 }
+.analysis-container {
+  margin-top: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: all 0.3s ease;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.analysis-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+}
+
+.analysis-header h3 i {
+  margin-right: 8px;
+  color: #27ae60;
+}
+
+.analysis-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.analysis-loading .spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(39, 174, 96, 0.2);
+  border-radius: 50%;
+  border-top-color: #27ae60;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 15px;
+}
+
+.analysis-loading p {
+  color: #7f8c8d;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.analysis-content {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #2c3e50;
+}
+
+.analysis-content h4 {
+  color: #16a085;
+  font-size: 1.1rem;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.analysis-content h4:first-child {
+  margin-top: 0;
+}
+
+.analysis-content p {
+  margin-bottom: 15px;
+  text-align: justify;
+}
+
+.error-message {
+  padding: 15px;
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-radius: 6px;
+  border-left: 4px solid #dc2626;
+}
+
+@keyframes spin {
+  to {
+      transform: rotate(360deg);
+  }
+}
+
+/* Style pour le bouton d'analyse */
+#analyze-image {
+  background-color: #2980b9;
+  margin-top: 10px;
+}
+
+#analyze-image:hover {
+  background-color: #3498db;
+}
+
+/* Responsive design pour mobile */
+@media (max-width: 768px) {
+  .analysis-container {
+      padding: 15px;
+      max-height: none;
+  }
+  
+  .analysis-content {
+      font-size: 0.95rem;
+  }
+}
