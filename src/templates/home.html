@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TerraSight - Visualisez Notre Planète</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-globe-americas"></i>
+                <h1>TerraSight</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="active">Accueil</a></li>
+                    <li><a href="#explorer">Explorer</a></li>
+                    <li><a href="#about">À propos</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Explorez les données géospatiales de notre planète</h1>
+                <p>TerraSight vous donne accès à des données climatiques, météorologiques et topographiques de haute qualité grâce à Google Earth Engine.</p>
+                <a href="#explorer" class="btn btn-primary">Commencer l'exploration</a>
+                <div class="eco-info">
+                    <i class="fas fa-leaf"></i>
+                    <span>Faible empreinte carbone - Optimisé pour économiser l'énergie</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="explorer" class="datasets-section">
+        <div class="container">
+            <h2 class="section-title">Explorer les jeux de données</h2>
+            <p class="section-desc">Choisissez parmi notre sélection de sources de données environnementales de haute qualité.</p>
+            
+            <div class="dataset-tabs">
+                <div class="tab-header">
+                    <button class="tab-btn active" data-category="climate">
+                        <i class="fas fa-temperature-high"></i> Climat
+                    </button>
+                    <button class="tab-btn" data-category="weather">
+                        <i class="fas fa-cloud-sun-rain"></i> Météo
+                    </button>
+                    <button class="tab-btn" data-category="terrain">
+                        <i class="fas fa-mountain"></i> Relief
+                    </button>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- Onglet Climat -->
+                    <div class="tab-pane active" id="climate-tab">
+                        <div class="datasets-grid">
+                            {% for dataset in datasets.climate %}
+                            <div class="dataset-card">
+                                <div class="dataset-icon">
+                                    {% if 'DAYMET' in dataset.id %}
+                                    <i class="fas fa-sun"></i>
+                                    {% elif 'GFS' in dataset.id %}
+                                    <i class="fas fa-globe"></i>
+                                    {% else %}
+                                    <i class="fas fa-chart-line"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="dataset-info">
+                                    <h3>{{ dataset.name }}</h3>
+                                    <p>{{ dataset.description }}</p>
+                                    <div class="dataset-meta">
+                                        <span><i class="fas fa-layer-group"></i> {{ dataset.variables|length }} couches</span>
+                                        {% if dataset.date_range %}
+                                        <span><i class="fas fa-calendar-alt"></i> {{ dataset.date_range[0] }} - {{ dataset.date_range[1] }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('viewer') }}?dataset={{ dataset.id }}" class="btn btn-secondary">
+                                    Visualiser <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Onglet Météo -->
+                    <div class="tab-pane" id="weather-tab">
+                        <div class="datasets-grid">
+                            {% for dataset in datasets.weather %}
+                            <div class="dataset-card">
+                                <div class="dataset-icon">
+                                    {% if 'CHIRPS' in dataset.id %}
+                                    <i class="fas fa-cloud-rain"></i>
+                                    {% elif 'GOES' in dataset.id %}
+                                    <i class="fas fa-satellite"></i>
+                                    {% else %}
+                                    <i class="fas fa-wind"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="dataset-info">
+                                    <h3>{{ dataset.name }}</h3>
+                                    <p>{{ dataset.description }}</p>
+                                    <div class="dataset-meta">
+                                        <span><i class="fas fa-layer-group"></i> {{ dataset.variables|length }} couches</span>
+                                        {% if dataset.date_range %}
+                                        <span><i class="fas fa-calendar-alt"></i> {{ dataset.date_range[0] }} - {{ dataset.date_range[1] }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('viewer') }}?dataset={{ dataset.id }}" class="btn btn-secondary">
+                                    Visualiser <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Onglet Relief -->
+                    <div class="tab-pane" id="terrain-tab">
+                        <div class="datasets-grid">
+                            {% for dataset in datasets.terrain %}
+                            <div class="dataset-card">
+                                <div class="dataset-icon">
+                                    {% if 'SRTM' in dataset.id %}
+                                    <i class="fas fa-mountain"></i>
+                                    {% else %}
+                                    <i class="fas fa-globe-americas"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="dataset-info">
+                                    <h3>{{ dataset.name }}</h3>
+                                    <p>{{ dataset.description }}</p>
+                                    <div class="dataset-meta">
+                                        <span><i class="fas fa-layer-group"></i> {{ dataset.variables|length }} couches</span>
+                                        <span><i class="fas fa-info-circle"></i> Données statiques</span>
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('viewer') }}?dataset={{ dataset.id }}" class="btn btn-secondary">
+                                    Visualiser <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title">À propos de TerraSight</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>TerraSight est une application de visualisation de données géospatiales qui utilise la puissance de Google Earth Engine pour accéder à des ensembles de données environnementales de haute qualité.</p>
+                    <p>Notre mission est de rendre ces données facilement accessibles à tous, tout en minimisant l'empreinte carbone de l'application grâce à une conception optimisée.</p>
+                    <h3>Green IT et Développement Durable</h3>
+                    <p>TerraSight s'inscrit dans une démarche Green IT par :</p>
+                    <ul>
+                        <li>L'utilisation d'images statiques plutôt que des tuiles dynamiques pour réduire la consommation de bande passante</li>
+                        <li>Une interface légère qui limite la consommation d'énergie des appareils</li>
+                        <li>Un accès à des données environnementales cruciales pour la compréhension et la lutte contre le changement climatique</li>
+                    </ul>
+                </div>
+                <div class="about-image">
+                    <div class="eco-stats">
+                        <div class="eco-stat">
+                            <i class="fas fa-server"></i>
+                            <div class="stat-info">
+                                <span class="stat-value">-60%</span>
+                                <span class="stat-label">Requêtes serveur</span>
+                            </div>
+                        </div>
+                        <div class="eco-stat">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <div class="stat-info">
+                                <span class="stat-value">2.1s</span>
+                                <span class="stat-label">Temps de chargement</span>
+                            </div>
+                        </div>
+                        <div class="eco-stat">
+                            <i class="fas fa-leaf"></i>
+                            <div class="stat-info">
+                                <span class="stat-value">1.2g</span>
+                                <span class="stat-label">CO2 par session</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <i class="fas fa-globe-americas"></i>
+                    <h2>TerraSight</h2>
+                    <p>Visualisez notre planète de manière durable</p>
+                </div>
+                <div class="footer-links">
+                    <h3>Liens rapides</h3>
+                    <ul>
+                        <li><a href="#">Accueil</a></li>
+                        <li><a href="#explorer">Explorer</a></li>
+                        <li><a href="#about">À propos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-attribution">
+                    <h3>Sources de données</h3>
+                    <ul>
+                        <li>Google Earth Engine</li>
+                        <li>NASA/NOAA/USGS</li>
+                        <li>ORNL DAAC</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TerraSight. Tous droits réservés.</p>
+                <p class="eco-badge"><i class="fas fa-leaf"></i> Développé avec des principes Green IT</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Gestion des onglets
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Retirer la classe active de tous les boutons
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+                    
+                    // Masquer tous les panneaux
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    
+                    // Afficher le panneau correspondant
+                    const category = this.getAttribute('data-category');
+                    document.getElementById(`${category}-tab`).classList.add('active');
+                });
+            });
+
+            // Gestion du défilement doux
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

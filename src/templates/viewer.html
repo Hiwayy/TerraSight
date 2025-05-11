@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TerraSight - Visualiseur de données</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="viewer-page">
+    <header class="viewer-header">
+        <div class="container">
+            <div class="logo">
+                <a href="{{ url_for('index') }}">
+                    <i class="fas fa-globe-americas"></i>
+                    <h1>TerraSight</h1>
+                </a>
+            </div>
+            <div class="dataset-info">
+                <h2>{{ dataset.name }}</h2>
+                <p>{{ dataset.description }}</p>
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}" class="btn btn-outline">
+                    <i class="fas fa-home"></i> Accueil
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="viewer-main">
+        <div class="container">
+            <div class="viewer-layout">
+                <aside class="viewer-sidebar">
+                    <div class="control-panel">
+                        <h3><i class="fas fa-sliders-h"></i> Contrôles</h3>
+                        
+                        <div class="control-group">
+                            <label for="variable">Variable</label>
+                            <select id="variable" class="form-control">
+                                {% for var in dataset.variables %}
+                                <option value="{{ var.id }}">{{ var.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        {% if dataset.date_range %}
+                        <div class="control-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" class="form-control" 
+                                value="{{ dataset.default_date }}"
+                                min="{{ dataset.date_range[0] }}" 
+                                max="{{ dataset.date_range[1] }}">
+                        </div>
+                        {% endif %}
+                        
+                        <button id="update-view" class="btn btn-primary btn-block">
+                            <i class="fas fa-sync-alt"></i> Mettre à jour
+                        </button>
+                        
+                        <button id="fullscreen-view" class="btn btn-secondary btn-block">
+                            <i class="fas fa-expand"></i> Plein écran
+                        </button>
+                        
+                        <div id="status" class="status-message" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="legend-panel" id="legend-container">
+                        <h3><i class="fas fa-palette"></i> Légende</h3>
+                        <div id="legend" class="legend"></div>
+                    </div>
+                    
+                    <div class="dataset-selector">
+                        <h3><i class="fas fa-database"></i> Autres datasets</h3>
+                        <div class="dataset-categories">
+                            {% for category, dataset_list in datasets.items() %}
+                            <div class="dataset-category">
+                                <h4>
+                                    {% if category == 'climate' %}
+                                    <i class="fas fa-temperature-high"></i> Climat
+                                    {% elif category == 'weather' %}
+                                    <i class="fas fa-cloud-sun-rain"></i> Météo
+                                    {% elif category == 'terrain' %}
+                                    <i class="fas fa-mountain"></i> Relief
+                                    {% endif %}
+                                </h4>
+                                <ul class="dataset-list">
+                                    {% for ds in dataset_list %}
+                                    <li {% if ds.id == dataset.id %}class="active"{% endif %}>
+                                        <a href="{{ url_for('viewer') }}?dataset={{ ds.id }}">
+                                            {{ ds.name.split(' - ')[0] }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </aside>
+                
+                <div class="viewer-content">
+                    <div class="image-container">
+                        <div id="loading-spinner" class="loading-spinner">
+                            <div class="spinner"></div>
+                            <p>Chargement des données...</p>
+                        </div>
+                        <img id="result-image" class="result-image" alt="Données géospatiales" style="display: none;">
+                        <div class="image-placeholder" id="image-placeholder">
+                            <i class="fas fa-globe-americas"></i>
+                            <p>Sélectionnez des paramètres et cliquez sur "Mettre à jour" pour visualiser les données</p>
+                        </div>
+                    </div>
+                    
+                    <div class="image-info-panel">
+                        <div class="info-item" id="dataset-name">
+                            <i class="fas fa-database"></i>
+                            <span>{{ dataset.id }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="image-info-panel">
+                    <div class="info-item" id="dataset-name">
+                        <i class="fas fa-database"></i>
+                        <span>{{ dataset.id }}</span>
+                    </div>
+                    <div class="info-item" id="variable-name">
+                        <i class="fas fa-layer-group"></i>
+                        <span>{{ dataset.variables[0].name }}</span>
+                    </div>
+                    {% if dataset.date_range %}
+                    <div class="info-item" id="date-info">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>{{ dataset.default_date }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="info-item eco-info">
+                        <i class="fas fa-leaf"></i>
+                        <span>Mode économique: images statiques</span>
+                    </div>
+                </div>
+                
+                <div class="actions-panel">
+                    <a href="https://developers.google.com/earth-engine/datasets/{{ dataset.id.replace('/', '/') }}" target="_blank" class="btn btn-link">
+                        <i class="fas fa-info-circle"></i> Documentation du dataset
+                    </a>
+                    <a href="{{ url_for('index') }}#explorer" class="btn btn-link">
+                        <i class="fas fa-th-large"></i> Explorer d'autres datasets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="viewer-footer">
+    <div class="container">
+        <p>&copy; 2025 TerraSight. Tous droits réservés.</p>
+        <p class="eco-badge"><i class="fas fa-leaf"></i> Développé avec des principes Green IT</p>
+    </div>
+</footer>
+
+<script>
+    // Variables globales
+    let currentDatasetId = "{{ dataset.id }}";
+    
+    // Au chargement du document
+    document.addEventListener('DOMContentLoaded', function() {
+        // Éléments du DOM
+        const updateButton = document.getElementById('update-view');
+        const fullscreenButton = document.getElementById('fullscreen-view');
+        const variableSelect = document.getElementById('variable');
+        const dateInput = document.getElementById('date');
+        const resultImage = document.getElementById('result-image');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const variableNameElement = document.querySelector('#variable-name span');
+        const dateInfoElement = document.querySelector('#date-info span');
+        
+        // Tester la connexion à Earth Engine
+        testEarthEngineConnection();
+        
+        // Gestionnaires d'événements
+        updateButton.addEventListener('click', loadImage);
+        fullscreenButton.addEventListener('click', openFullscreenView);
+        
+        // Mise à jour du nom de variable lorsqu'on change la sélection
+        variableSelect.addEventListener('change', function() {
+            const selectedOption = variableSelect.options[variableSelect.selectedIndex];
+            variableNameElement.textContent = selectedOption.text;
+        });
+        
+        // Mise à jour de la date affichée
+        if (dateInput) {
+            dateInput.addEventListener('change', function() {
+                if (dateInfoElement) {
+                    dateInfoElement.textContent = dateInput.value;
+                }
+            });
+        }
+        
+        // Fonction pour tester la connexion à Earth Engine
+        function testEarthEngineConnection() {
+            showStatus('Connexion à Earth Engine...', 'info');
+            
+            fetch('/api/test_connection')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        hideStatus();
+                        console.log('Connexion à Earth Engine réussie!');
+                    } else {
+                        showStatus('Erreur de connexion à Earth Engine: ' + data.message, 'error');
+                        console.error('Erreur de connexion:', data);
+                    }
+                })
+                .catch(error => {
+                    showStatus('Erreur de connexion au serveur: ' + error.message, 'error');
+                    console.error('Erreur:', error);
+                });
+        }
+        
+        // Fonction pour charger l'image
+        function loadImage() {
+            // Récupérer les valeurs des contrôles
+            const variable = variableSelect.value;
+            const date = dateInput ? dateInput.value : null;
+            
+            // Masquer l'image précédente et afficher le spinner
+            resultImage.style.display = 'none';
+            imagePlaceholder.style.display = 'none';
+            loadingSpinner.style.display = 'flex';
+            showStatus('Chargement des données...', 'info');
+            
+            // Construire l'URL de l'API
+            let apiUrl = `/api/get_image?dataset=${currentDatasetId}&variable=${variable}`;
+            if (date) {
+                apiUrl += `&date=${date}`;
+            }
+            
+            // Appeler l'API pour obtenir l'URL de l'image
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Erreur lors de la récupération des données');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Masquer le spinner
+                    loadingSpinner.style.display = 'none';
+                    
+                    if (data.error) {
+                        showStatus('Erreur: ' + data.error, 'error');
+                        return;
+                    }
+                    
+                    console.log('Données d\'image reçues:', data);
+                    
+                    // Mettre à jour l'image
+                    resultImage.src = data.image_url;
+                    resultImage.alt = data.variable_name;
+                    resultImage.style.display = 'block';
+                    
+                    // Mettre à jour la légende
+                    updateLegend(data.vis_params);
+                    
+                    hideStatus();
+                    showStatus('Image chargée avec succès!', 'success');
+                    
+                    // Cacher le message de succès après 3 secondes
+                    setTimeout(hideStatus, 3000);
+                })
+                .catch(error => {
+                    loadingSpinner.style.display = 'none';
+                    imagePlaceholder.style.display = 'flex';
+                    showStatus('Erreur: ' + error.message, 'error');
+                    console.error('Erreur lors du chargement des données:', error);
+                });
+        }
+        
+        // Fonction pour ouvrir la vue en plein écran
+        function openFullscreenView() {
+            const variable = variableSelect.value;
+            const date = dateInput ? dateInput.value : '';
+            
+            // Construire l'URL de la vue plein écran
+            let fullscreenUrl = `/static_image?dataset=${currentDatasetId}&variable=${variable}`;
+            if (date) {
+                fullscreenUrl += `&date=${date}`;
+            }
+            
+            // Ouvrir dans un nouvel onglet
+            window.open(fullscreenUrl, '_blank');
+        }
+        
+        // Fonction pour mettre à jour la légende
+        function updateLegend(visParams) {
+            const legendElement = document.getElementById('legend');
+            legendElement.innerHTML = '';
+            
+            const palette = visParams.palette;
+            const min = visParams.min;
+            const max = visParams.max;
+            const steps = palette.length;
+            const range = max - min;
+            
+            for (let i = 0; i < palette.length; i++) {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = 'color-box';
+                const color = palette[i].startsWith('#') ? palette[i] : `#${palette[i]}`;
+                colorBox.style.backgroundColor = color;
+                
+                const label = document.createElement('span');
+                const value = min + (i * (range / (steps - 1)));
+                label.textContent = value.toFixed(1);
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(label);
+                legendElement.appendChild(legendItem);
+            }
+        }
+        
+        // Fonction pour afficher un message de statut
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = 'status-message';
+            statusElement.classList.add(`status-${type}`);
+            statusElement.style.display = 'block';
+        }
+        
+        // Fonction pour masquer le message de statut
+        function hideStatus() {
+            const statusElement = document.getElementById('status');
+            statusElement.style.display = 'none';
+        }
+    });
+</script>
+</body>
+</html>
